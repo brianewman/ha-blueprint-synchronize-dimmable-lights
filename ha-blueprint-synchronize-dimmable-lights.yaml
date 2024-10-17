@@ -1,0 +1,93 @@
+blueprint:
+  name: Sync Dimmable Lights
+  description: Sync two dimmable lights.  Works with Z-Wave dimmers and smart bulbs.  Either light can be a group or single light.
+  domain: automation
+  input:
+    light1:
+      name: Light One
+      selector:
+        entity:
+          domain: light
+    light2:
+      name: Light Two
+      selector:
+        entity:
+          domain: light
+  source_url: https://github.com/brianewman/ha-blueprint-synchronize-dimmable-lights/blob/main/ha-blueprint-synchronize-dimmable-lights.yaml
+  
+triggers:
+  - trigger: state
+    id: turn_on
+    entity_id:
+      - !input light1
+      - !input light2
+    from: "off"
+    to: "on"
+  - trigger: state
+    id: turn_off
+    entity_id:
+      - !input light1
+      - !input light2
+    from: "on"
+    to: "off"
+  - trigger: state
+    id: set_brightness
+    entity_id:
+      - !input light1
+      - !input light2
+    attribute: brightness
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.context.id != this.context.id }}"
+  - condition: template
+    value_template: >-
+      {{ (trigger.id != "set_brightness") or
+      (trigger.to_state.attributes.brightness != none) }}
+  - condition: template
+    value_template: >-
+      {{ (trigger.to_state.state == (states.light[light1].state  if
+      (trigger.entity_id == states.light[light1].entity_id) else
+      states.light[light2].state)) or (trigger.to_state.attributes.brightness
+      and (trigger.to_state.attributes.brightness ==
+      (states.light[light1].attributes.brightness  if (trigger.entity_id ==
+      states.light[light1].entity_id) else
+      states.light[light2].attributes.brightness) )) }}
+actions:
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 0
+      milliseconds: 200
+  - condition: template
+    value_template: >-
+      {{ (states.light[light1].last_updated  if (trigger.entity_id ==
+      states.light[light1].entity_id) else states.light[light2].last_updated) ==
+      trigger.to_state.last_updated }}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states(trigger.entity_id) == 'on' }}"
+        sequence:
+          - target:
+              entity_id: >-
+                {{ states.light[light2].entity_id  if (trigger.entity_id ==
+                states.light[light1].entity_id) else
+                states.light[light1].entity_id }}
+            action: homeassistant.turn_on
+            data:
+              brightness: >-
+                {{ state_attr(trigger.entity_id, 'brightness') if
+                state_attr(trigger.entity_id, 'brightness') else null }}
+    default:
+      - target:
+          entity_id: >-
+            {{ states.light[light2].entity_id  if (trigger.entity_id ==
+            states.light[light1].entity_id) else states.light[light1].entity_id
+            }}
+        action: homeassistant.turn_off
+    enabled: true
+mode: parallel
+max_exceeded: silent
+trace:
+  stored_traces: 20
+max: 100
