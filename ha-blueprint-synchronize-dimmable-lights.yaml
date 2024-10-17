@@ -15,28 +15,28 @@ blueprint:
           domain: light
   source_url: https://github.com/brianewman/ha-blueprint-synchronize-dimmable-lights/blob/main/ha-blueprint-synchronize-dimmable-lights.yaml
   
-triggers:
-  - trigger: state
+trigger:
+  - platform: state
     id: turn_on
     entity_id:
       - !input light1
       - !input light2
     from: "off"
     to: "on"
-  - trigger: state
+  - platform: state
     id: turn_off
     entity_id:
       - !input light1
       - !input light2
     from: "on"
     to: "off"
-  - trigger: state
+  - platform: state
     id: set_brightness
     entity_id:
       - !input light1
       - !input light2
     attribute: brightness
-conditions:
+condition:
   - condition: template
     value_template: "{{ trigger.to_state.context.id != this.context.id }}"
   - condition: template
@@ -52,7 +52,7 @@ conditions:
       (states.light[light1].attributes.brightness  if (trigger.entity_id ==
       states.light[light1].entity_id) else
       states.light[light2].attributes.brightness) )) }}
-actions:
+action:
   - delay:
       hours: 0
       minutes: 0
